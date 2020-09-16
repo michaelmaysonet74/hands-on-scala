@@ -1,4 +1,4 @@
-package handsonscala
+package handsonscala.chapters
 
 object Chapter4 {
   def isValidSudoku(grid: Array[Array[Int]]): Boolean = {
@@ -43,7 +43,7 @@ object Chapter4 {
       .replaceAll("0", " ")
   }
 
-  def main(args: Array[String]): Unit = {
+  def execute(): Unit = {
     val validGrid = Array(
       Array(3, 1, 6, 5, 7, 8, 4, 9, 2),
       Array(5, 2, 9, 1, 3, 4, 7, 6, 8),

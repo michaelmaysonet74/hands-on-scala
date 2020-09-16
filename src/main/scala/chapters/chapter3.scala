@@ -1,4 +1,4 @@
-package handsonscala
+package handsonscala.chapters
 
 import java.io._
 
@@ -70,41 +70,44 @@ object Chapter3 {
     }
   }
 
-//   def main(args: Array[String]) = {
-//     flexibleFizzBuzz(s => {})
-//     flexibleFizzBuzz(s => println(s))
+  def execute(): Unit = {
+    flexibleFizzBuzz(s => {})
+    flexibleFizzBuzz(s => println(s))
 
-//     var i = 0
-//     val output = new Array[String](100)
+    var i = 0
+    val output = new Array[String](100)
 
-//     flexibleFizzBuzz { s =>
-//       output(i) = s
-//       i += 1
-//     }
+    flexibleFizzBuzz { s =>
+      output(i) = s
+      i += 1
+    }
 
-//     println(output.mkString("\n"))
+    println(output.mkString("\n"))
 
-//     printMessages(
-//       Array(
-//         new Msg(0, None, "Hello"),
-//         new Msg(1, Some(0), "World"),
-//         new Msg(2, None, "I am Cow"),
-//         new Msg(3, Some(2), "Hear me moo"),
-//         new Msg(4, Some(2), "Here I stand"),
-//         new Msg(5, Some(2), "I am Cow"),
-//         new Msg(6, Some(5), "Here me moo, moo")
-//       )
-//     )
+    printMessages(
+      Array(
+        new Msg(0, None, "Hello"),
+        new Msg(1, Some(0), "World"),
+        new Msg(2, None, "I am Cow"),
+        new Msg(3, Some(2), "Hear me moo"),
+        new Msg(4, Some(2), "Here I stand"),
+        new Msg(5, Some(2), "I am Cow"),
+        new Msg(6, Some(5), "Here me moo, moo")
+      )
+    )
 
-//     withFileWriter("File.txt") { writer =>
-//       writer.write("Hello\n")
-//       writer.write("World!")
-//     }
+    withFileWriter("/Users/michael/code/hands-on-scala/results/File.txt") {
+      writer =>
+        writer.write("Hello\n")
+        writer.write("World!")
+    }
 
-//     val result = withFileReader("File.txt") { reader =>
-//       reader.readLine + "\n" + reader.readLine
-//     }.getOrElse("Failed")
+    val result =
+      withFileReader("/Users/michael/code/hands-on-scala/results/File.txt") {
+        reader =>
+          reader.readLine + "\n" + reader.readLine
+      }.getOrElse("Failed")
 
-//     assert(result == "Hello\nWorld!")
-//   }
+    assert(result == "Hello\nWorld!")
+  }
 }
