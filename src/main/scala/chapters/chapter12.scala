@@ -33,6 +33,7 @@ object Chapter12 {
         done = true
       } else {
         responses.appendAll(parsed)
+        page += 1
       }
     }
 
@@ -85,7 +86,6 @@ object Chapter12 {
           ujson.read(response)("number").num.toInt
         )
       }
-      case _ => (0, 0)
     }
   }
 
@@ -117,7 +117,7 @@ object Chapter12 {
         println(s"Commenting on issue old_id=$issueId new_id=$newIssueId")
 
         val response = requests.post(
-          s"https://api.github.com/repos/$destRepo/issues",
+          s"https://api.github.com/repos/$destRepo/issues/$newIssueId/comments",
           data = ujson.Obj(
             "body" -> s"$body\nOriginal Author: $user"
           ),
@@ -134,25 +134,35 @@ object Chapter12 {
       destRepo: String,
       token: String
   ) = {
-    for (
-      issues <- getIssues(srcRepo, token);
-      comments <- getComments(srcRepo, token)
-    ) yield {
-      val issueNumMap = issues.map(postIssue(_, destRepo, token)).toMap
+    val issues = getIssues(srcRepo, token);
+    val comments = getComments(srcRepo, token)
+    val issueNumMap = issues.map(postIssue(_, destRepo, token)).toMap
 
-      comments.map { comment =>
-        val newIssueId = issueNumMap.get(comment._1)
-        postComment(comment, newIssueId, destRepo, token)
-      }
+    comments.filter(comment => issueNumMap.get(comment._1) != None).map {
+      comment =>
+        postComment(
+          comment,
+          issueNumMap(comment._1).toInt,
+          destRepo,
+          token
+        )
     }
   }
 
   def execute(): Unit = {
+    val srcRepo = "lihaoyi/requests-scala"
+    val destRepo = "michaelmaysonet74/issue-migration"
+
     getToken(
       "/Users/michael/code/hands-on-scala/github_token.txt"
     ) match {
       case "Failed" => println("Couldn't get token.")
-      case token    => migrateIssuesWithComments("", "", token)
+      case token =>
+        migrateIssuesWithComments(
+          srcRepo,
+          destRepo,
+          token
+        )
     }
   }
 }
