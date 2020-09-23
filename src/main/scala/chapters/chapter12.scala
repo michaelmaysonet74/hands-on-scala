@@ -100,7 +100,7 @@ object Chapter12 {
   ) = {
     println(s"Closing issue $issueId")
 
-    val response = requests.post(
+    val response = requests.patch(
       s"https://api.github.com/repos/$destRepo/issues/$issueId",
       data = ujson.Obj("state" -> state),
       headers = Map("Authorization" -> s"token $token")
