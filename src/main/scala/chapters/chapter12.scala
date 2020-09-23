@@ -54,7 +54,8 @@ object Chapter12 {
           issue("number").num.toInt,
           issue("title").str,
           issue("body").str,
-          issue("user")("login").str
+          issue("user")("login").str,
+          issue("state").str
         )
       }
       .sortBy((number) => number)
@@ -62,31 +63,50 @@ object Chapter12 {
   }
 
   def postIssue(
-      issue: (Int, String, String, String),
+      issue: (Int, String, String, String, String),
+      srcRepo: String,
       destRepo: String,
       token: String
   ): (Int, Int) = {
     issue match {
-      case (number, title, body, user) => {
-        println(s"Creating issue $number")
+      case (issueId, title, body, user, state) => {
+        println(s"Creating issue $issueId")
+        val previousIssueUrl = s"https://github.com/$srcRepo/issues/$issueId"
 
         val response = requests.post(
           s"https://api.github.com/repos/$destRepo/issues",
           data = ujson.Obj(
             "title" -> title,
-            "body" -> s"$body\nID: $number\n Original Author: $user"
+            "body" -> s"$body\nID: $issueId\n Original Author: $user\nOriginal Issue: $previousIssueUrl"
           ),
           headers = Map("Authorization" -> s"token $token")
         )
 
         println(response.statusCode)
-
+        closeIssue(issueId, state, destRepo, token)
         (
-          number,
+          issueId,
           ujson.read(response)("number").num.toInt
         )
       }
     }
+  }
+
+  def closeIssue(
+      issueId: Int,
+      state: String,
+      destRepo: String,
+      token: String
+  ) = {
+    println(s"Closing issue $issueId")
+
+    val response = requests.post(
+      s"https://api.github.com/repos/$destRepo/issues/$issueId",
+      data = ujson.Obj("state" -> state),
+      headers = Map("Authorization" -> s"token $token")
+    )
+
+    println(response.statusCode)
   }
 
   def getComments(srcRepo: String, token: String) = {
@@ -136,7 +156,17 @@ object Chapter12 {
   ) = {
     val issues = getIssues(srcRepo, token);
     val comments = getComments(srcRepo, token)
-    val issueNumMap = issues.map(postIssue(_, destRepo, token)).toMap
+
+    val issueNumMap = issues
+      .map(
+        postIssue(
+          _,
+          srcRepo,
+          destRepo,
+          token
+        )
+      )
+      .toMap
 
     comments.filter(comment => issueNumMap.get(comment._1) != None).map {
       comment =>
