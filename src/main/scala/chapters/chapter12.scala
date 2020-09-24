@@ -83,7 +83,7 @@ object Chapter12 {
         )
 
         println(response.statusCode)
-        closeIssue(issueId, state, destRepo, token)
+
         (
           issueId,
           ujson.read(response)("number").num.toInt
@@ -167,6 +167,19 @@ object Chapter12 {
         )
       )
       .toMap
+
+    issues
+      .filter(issue =>
+        issue._5 == "closed" && issueNumMap.get(issue._1) != None
+      )
+      .map(issue =>
+        closeIssue(
+          issueNumMap(issue._1).toInt,
+          issue._5,
+          destRepo,
+          token
+        )
+      )
 
     comments.filter(comment => issueNumMap.get(comment._1) != None).map {
       comment =>
