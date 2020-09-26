@@ -1,0 +1,20 @@
+*.class
+*.log
+github_token.txt
+
+# sbt specific
+.cache/
+.history/
+.lib/
+dist/*
+target/
+lib_managed/
+src_managed/
+project/
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+.idea
+.vscode
+.metals
