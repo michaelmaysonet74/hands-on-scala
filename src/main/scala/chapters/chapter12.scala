@@ -13,37 +13,45 @@ object Chapter12 {
       .getOrElse("Failed")
   }
 
-  def fetchPaginated(url: String, token: String, params: (String, String)*) = {
-    var done = false
-    var page = 1
-    val responses = collection.mutable.Buffer.empty[ujson.Value]
+  def fetchPaginated(
+      url: String,
+      token: String,
+      page: Option[Int],
+      responses: Option[List[ujson.Value]],
+      params: (String, String)*
+  ): List[ujson.Value] = {
+    val _page = page.getOrElse(1)
+    val _responses = responses.getOrElse(List.empty[ujson.Value])
 
-    while (!done) {
-      println(s"page $page...")
+    println(s"page ${_page}...")
 
-      val resp = requests.get(
+    val resp = requests.get(
+      url,
+      params = Map("page" -> _page.toString) ++ params,
+      headers = Map("Authorization" -> s"token $token")
+    )
+
+    val parsed = ujson.read(resp).arr
+
+    if (parsed.length > 0) {
+      _responses ++ fetchPaginated(
         url,
-        params = Map("page" -> page.toString) ++ params,
-        headers = Map("Authorization" -> s"token $token")
+        token,
+        Some(_page + 1),
+        Some(parsed.toList),
+        params: _*
       )
-
-      val parsed = ujson.read(resp).arr
-
-      if (parsed.length == 0) {
-        done = true
-      } else {
-        responses.appendAll(parsed)
-        page += 1
-      }
+    } else {
+      _responses
     }
-
-    responses
   }
 
   def getIssues(srcRepo: String, token: String) = {
     val issues = fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues",
       token,
+      None,
+      None,
       "state" -> "all"
     )
 
@@ -112,7 +120,9 @@ object Chapter12 {
   def getComments(srcRepo: String, token: String) = {
     val comments = fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues/comments",
-      token
+      token,
+      None,
+      None
     )
 
     comments.map { comment =>
