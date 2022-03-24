@@ -3,9 +3,9 @@ package handsonscala.chapters
 import java.io._
 
 case class Msg(
-    val id: Int,
-    val parent: Option[Int],
-    val txt: String
+    id: Int,
+    parent: Option[Int],
+    txt: String
 )
 
 object Chapter3 {
