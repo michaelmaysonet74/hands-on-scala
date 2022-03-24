@@ -5,15 +5,14 @@ import upickle._
 import handsonscala.chapters.Chapter3
 
 object Chapter12 {
-  def getToken(fileName: String): String = {
+  private def getToken(fileName: String): String =
     Chapter3
       .withFileReader(fileName) { reader =>
         reader.readLine
       }
       .getOrElse("Failed")
-  }
 
-  def fetchPaginated(
+  private def fetchPaginated(
       url: String,
       token: String,
       page: Option[Int],
@@ -46,7 +45,7 @@ object Chapter12 {
     }
   }
 
-  def getIssues(srcRepo: String, token: String) = {
+  private def getIssues(srcRepo: String, token: String) = {
     val issues = fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues",
       token,
@@ -70,12 +69,12 @@ object Chapter12 {
       .toList
   }
 
-  def postIssue(
+  private def postIssue(
       issue: (Int, String, String, String, String),
       srcRepo: String,
       destRepo: String,
       token: String
-  ): (Int, Int) = {
+  ): (Int, Int) =
     issue match {
       case (issueId, title, body, user, state) => {
         println(s"Creating issue $issueId")
@@ -98,9 +97,8 @@ object Chapter12 {
         )
       }
     }
-  }
 
-  def closeIssue(
+  private def closeIssue(
       issueId: Int,
       state: String,
       destRepo: String,
@@ -117,7 +115,7 @@ object Chapter12 {
     println(response.statusCode)
   }
 
-  def getComments(srcRepo: String, token: String) = {
+  private def getComments(srcRepo: String, token: String) = {
     val comments = fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues/comments",
       token,
@@ -136,7 +134,7 @@ object Chapter12 {
     }.toList
   }
 
-  def postComment(
+  private def postComment(
       comment: (Int, String, String),
       newIssueId: Int,
       destRepo: String,
@@ -159,7 +157,7 @@ object Chapter12 {
     }
   }
 
-  def migrateIssuesWithComments(
+  private def migrateIssuesWithComments(
       srcRepo: String,
       destRepo: String,
       token: String
