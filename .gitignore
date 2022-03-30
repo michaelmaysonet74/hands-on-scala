@@ -1,6 +1,7 @@
 *.class
 *.log
 github_token.txt
+.DS_Store
 
 # sbt specific
 .cache/
