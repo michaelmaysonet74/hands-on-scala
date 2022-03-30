@@ -9,8 +9,8 @@ case class Msg(
 )
 
 object Chapter3 {
-  def flexibleFizzBuzz(cb: String => Unit) = {
-    for (n <- Range.inclusive(1, 100)) {
+  def flexibleFizzBuzz(cb: String => Unit) =
+    (1 to 100).foreach { n =>
       cb(
         if (n % 3 == 0 && n % 5 == 0) "FizzBuzz"
         else if (n % 3 == 0) "Fizz"
@@ -18,18 +18,16 @@ object Chapter3 {
         else n.toString
       )
     }
-  }
 
   def printMessages(
-      messages: Array[Msg],
+      messages: Seq[Msg],
       indent: String = "",
       parent: Option[Int] = None
-  ): Unit = {
+  ): Unit =
     for (m <- messages if m.parent == parent) {
       println(s"$indent#${m.id} ${m.txt}")
       printMessages(messages, indent + "    ", Some(m.id))
     }
-  }
 
   def withFileWriter(fileName: String)(cb: BufferedWriter => Unit): Unit = {
     val file = new File(fileName)
@@ -47,7 +45,7 @@ object Chapter3 {
 
   def withFileReader(
       fileName: String
-  )(cb: BufferedReader => String): Option[String] = {
+  )(cb: BufferedReader => String): Option[String] =
     try {
       val file = new File(fileName)
       val br = new BufferedReader(new FileReader(file))
@@ -68,7 +66,6 @@ object Chapter3 {
         None
       }
     }
-  }
 
   def execute(): Unit = {
     flexibleFizzBuzz(s => {})
@@ -85,7 +82,7 @@ object Chapter3 {
     println(output.mkString("\n"))
 
     printMessages(
-      Array(
+      List(
         new Msg(0, None, "Hello"),
         new Msg(1, Some(0), "World"),
         new Msg(2, None, "I am Cow"),
