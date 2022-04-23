@@ -3,13 +3,50 @@ package com.michaelmaysonet74.handsonscala.chapters
 import requests._
 import upickle._
 
+import scala.util.{Left, Right}
+
+final case class Issue(
+  id: Int,
+  title: String,
+  body: String,
+  user: String,
+  state: String
+)
+
+final case class Comment(
+  issueId: Int,
+  user: String,
+  body: String
+)
+
 object Chapter12 {
+
   import Chapter3.withFileReader
 
-  private def getToken(fileName: String): String =
+  def execute(): Unit = {
+    val srcRepo = "lihaoyi/requests-scala"
+    val destRepo = "michaelmaysonet74/issue-migration"
+
+    getToken(
+      "/Users/michael/code/hands-on-scala/github_token.txt"
+    ) match {
+      case Left(reason) => println(reason)
+      case Right(token) =>
+        migrateIssuesWithComments(
+          srcRepo,
+          destRepo,
+          token
+        )
+    }
+  }
+
+  private def getToken(fileName: String): Either[String, String] =
     withFileReader(fileName) { reader =>
       reader.readLine
-    }.getOrElse("Failed")
+    } match {
+      case Some(token) => Right(token)
+      case None        => Left("Couldn't get token.")
+    }
 
   private def fetchPaginated(
     url: String,
@@ -44,7 +81,7 @@ object Chapter12 {
     }
   }
 
-  private def getIssues(srcRepo: String, token: String) = {
+  private def getIssues(srcRepo: String, token: String): List[Issue] = {
     val issues = fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues",
       token,
@@ -54,28 +91,27 @@ object Chapter12 {
     )
 
     issues
-      .filter(!_.obj.contains("pull_request"))
-      .map { issue =>
-        (
-          issue("number").num.toInt,
-          issue("title").str,
-          issue("body").str,
-          issue("user")("login").str,
-          issue("state").str
-        )
+      .collect {
+        case rawIssue if !rawIssue.obj.contains("pull_request") =>
+          Issue(
+            id = rawIssue("number").num.toInt,
+            title = rawIssue("title").str,
+            body = rawIssue("body").str,
+            user = rawIssue("user")("login").str,
+            state = rawIssue("state").str
+          )
       }
-      .sortBy((number) => number)
-      .toList
+      .sortBy(_.id)
   }
 
   private def postIssue(
-    issue: (Int, String, String, String, String),
+    issue: Issue,
     srcRepo: String,
     destRepo: String,
     token: String
   ): (Int, Int) =
     issue match {
-      case (issueId, title, body, user, state) => {
+      case Issue(issueId, title, body, user, state) =>
         println(s"Creating issue $issueId")
         val previousIssueUrl = s"https://github.com/$srcRepo/issues/$issueId"
 
@@ -89,12 +125,7 @@ object Chapter12 {
         )
 
         println(response.statusCode)
-
-        (
-          issueId,
-          ujson.read(response)("number").num.toInt
-        )
-      }
+        issueId -> ujson.read(response)("number").num.toInt
     }
 
   private def closeIssue(
@@ -114,7 +145,7 @@ object Chapter12 {
     println(response.statusCode)
   }
 
-  private def getComments(srcRepo: String, token: String) = {
+  private def getComments(srcRepo: String, token: String): List[Comment] = {
     val comments = fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues/comments",
       token,
@@ -123,36 +154,34 @@ object Chapter12 {
     )
 
     comments.map { comment =>
-      (
-        comment("issue_url").str match {
+      Comment(
+        issueId = comment("issue_url").str match {
           case s"https://api.github.com/repos/$srcRepo/issues/$id" => id.toInt
         },
-        comment("user")("login").str,
-        comment("body").str
+        user = comment("user")("login").str,
+        body = comment("body").str
       )
-    }.toList
+    }
   }
 
   private def postComment(
-    comment: (Int, String, String),
+    comment: Comment,
     newIssueId: Int,
     destRepo: String,
     token: String
-  ) = {
-    comment match {
-      case (issueId, user, body) => {
-        println(s"Commenting on issue old_id=$issueId new_id=$newIssueId")
+  ): Unit = comment match {
+    case Comment(issueId, user, body) => {
+      println(s"Commenting on issue old_id=$issueId new_id=$newIssueId")
 
-        val response = requests.post(
-          s"https://api.github.com/repos/$destRepo/issues/$newIssueId/comments",
-          data = ujson.Obj(
-            "body" -> s"$body\nOriginal Author: $user"
-          ),
-          headers = Map("Authorization" -> s"token $token")
-        )
+      val response = requests.post(
+        s"https://api.github.com/repos/$destRepo/issues/$newIssueId/comments",
+        data = ujson.Obj(
+          "body" -> s"$body\nOriginal Author: $user"
+        ),
+        headers = Map("Authorization" -> s"token $token")
+      )
 
-        println(response.statusCode)
-      }
+      println(response.statusCode)
     }
   }
 
@@ -160,7 +189,7 @@ object Chapter12 {
     srcRepo: String,
     destRepo: String,
     token: String
-  ) = {
+  ): Unit = {
     val issues = getIssues(srcRepo, token);
     val comments = getComments(srcRepo, token)
 
@@ -176,40 +205,26 @@ object Chapter12 {
       .toMap
 
     issues
-      .filter(issue => issue._5 == "closed" && issueNumMap.get(issue._1) != None)
-      .map(issue =>
-        closeIssue(
-          issueNumMap(issue._1).toInt,
-          issue._5,
-          destRepo,
-          token
-        )
-      )
+      .collect {
+        case issue if issue.state == "closed" && issueNumMap.get(issue.id) != None =>
+          closeIssue(
+            issueNumMap(issue.id).toInt,
+            issue.state,
+            destRepo,
+            token
+          )
+      }
 
-    comments.filter(comment => issueNumMap.get(comment._1) != None).map { comment =>
-      postComment(
-        comment,
-        issueNumMap(comment._1).toInt,
-        destRepo,
-        token
-      )
-    }
+    comments
+      .collect {
+        case comment if issueNumMap.get(comment.issueId) != None =>
+          postComment(
+            comment,
+            issueNumMap(comment.issueId).toInt,
+            destRepo,
+            token
+          )
+      }
   }
 
-  def execute(): Unit = {
-    val srcRepo = "lihaoyi/requests-scala"
-    val destRepo = "michaelmaysonet74/issue-migration"
-
-    getToken(
-      "/Users/michael/code/hands-on-scala/github_token.txt"
-    ) match {
-      case "Failed" => println("Couldn't get token.")
-      case token =>
-        migrateIssuesWithComments(
-          srcRepo,
-          destRepo,
-          token
-        )
-    }
-  }
 }

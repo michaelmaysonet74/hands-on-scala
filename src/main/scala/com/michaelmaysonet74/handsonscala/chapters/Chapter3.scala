@@ -9,64 +9,6 @@ case class Msg(
 )
 
 object Chapter3 {
-  def flexibleFizzBuzz(cb: String => Unit) =
-    (1 to 100).foreach { n =>
-      cb(
-        if (n % 3 == 0 && n % 5 == 0) "FizzBuzz"
-        else if (n % 3 == 0) "Fizz"
-        else if (n % 5 == 0) "Buzz"
-        else n.toString
-      )
-    }
-
-  def printMessages(
-    messages: Seq[Msg],
-    indent: String = "",
-    parent: Option[Int] = None
-  ): Unit =
-    for (m <- messages if m.parent == parent) {
-      println(s"$indent#${m.id} ${m.txt}")
-      printMessages(messages, indent + "    ", Some(m.id))
-    }
-
-  def withFileWriter(fileName: String)(cb: BufferedWriter => Unit): Unit = {
-    val file = new File(fileName)
-    val bw = new BufferedWriter(new FileWriter(file))
-
-    try {
-      cb(bw)
-    } catch {
-      case e: IOException =>
-        println("Had an IOException trying to write that file")
-    } finally {
-      bw.close
-    }
-  }
-
-  def withFileReader(
-    fileName: String
-  )(cb: BufferedReader => String): Option[String] =
-    try {
-      val file = new File(fileName)
-      val br = new BufferedReader(new FileReader(file))
-
-      try {
-        Some(cb(br))
-      } catch {
-        case e: IOException => {
-          println("Had an IOException trying to read that file")
-          None
-        }
-      } finally {
-        br.close
-      }
-    } catch {
-      case e: Exception => {
-        println("Had a problem trying to read that file")
-        None
-      }
-    }
-
   def execute(): Unit = {
     flexibleFizzBuzz(s => {})
     flexibleFizzBuzz(s => println(s))
@@ -105,4 +47,66 @@ object Chapter3 {
 
     assert(result == "Hello\nWorld!")
   }
+
+  def withFileWriter(fileName: String)(cb: BufferedWriter => Unit): Unit = {
+    val file = new File(fileName)
+    val bw = new BufferedWriter(new FileWriter(file))
+
+    try {
+      cb(bw)
+    } catch {
+      case e: IOException =>
+        println("Had an IOException trying to write that file")
+    } finally {
+      bw.close
+    }
+  }
+
+  def withFileReader(
+    fileName: String
+  )(cb: BufferedReader => String): Option[String] =
+    try {
+      val file = new File(fileName)
+      val br = new BufferedReader(new FileReader(file))
+
+      try {
+        Some(cb(br))
+      } catch {
+        case e: IOException => {
+          println(s"Had an IOException trying to read file: $fileName")
+          None
+        }
+      } finally {
+        br.close
+      }
+    } catch {
+      case e: Exception => {
+        println(s"Had a problem trying to read file: $fileName")
+        None
+      }
+    }
+
+  private def flexibleFizzBuzz(cb: String => Unit) =
+    (1 to 100).foreach { n =>
+      cb(
+        if (n % 3 == 0 && n % 5 == 0) "FizzBuzz"
+        else if (n % 3 == 0) "Fizz"
+        else if (n % 5 == 0) "Buzz"
+        else n.toString
+      )
+    }
+
+  private def printMessages(
+    messages: Seq[Msg],
+    indent: String = "",
+    parent: Option[Int] = None
+  ): Unit =
+    for {
+      m <- messages
+      if m.parent == parent
+    } {
+      println(s"$indent#${m.id} ${m.txt}")
+      printMessages(messages, s"$indent    ", Some(m.id))
+    }
+
 }

@@ -1,8 +1,43 @@
 package com.michaelmaysonet74.handsonscala.chapters
 
 object Chapter4 {
+
   type Row = List[Int]
   type Grid = List[Row]
+
+  def execute(): Unit = {
+    val validGrid = List(
+      List(3, 1, 6, 5, 7, 8, 4, 9, 2),
+      List(5, 2, 9, 1, 3, 4, 7, 6, 8),
+      List(4, 8, 7, 6, 2, 9, 5, 3, 1),
+      List(2, 6, 3, 0, 1, 0, 0, 8, 0),
+      List(9, 7, 4, 8, 6, 3, 0, 0, 5),
+      List(8, 5, 1, 0, 9, 0, 6, 0, 0),
+      List(1, 3, 0, 0, 0, 0, 2, 5, 0),
+      List(0, 0, 0, 0, 0, 0, 0, 7, 4),
+      List(0, 0, 5, 2, 0, 6, 3, 0, 0)
+    )
+
+    println(isValidSudoku(validGrid)) // => true
+
+    println(
+      isValidSudoku(
+        List(
+          List(3, 1, 6, 5, 7, 8, 4, 9, 3),
+          List(5, 2, 9, 1, 3, 4, 7, 6, 8),
+          List(4, 8, 7, 6, 2, 9, 5, 3, 1),
+          List(2, 6, 3, 0, 1, 0, 0, 8, 0),
+          List(9, 7, 4, 8, 6, 3, 0, 0, 5),
+          List(8, 5, 1, 0, 9, 0, 6, 0, 0),
+          List(1, 3, 0, 0, 0, 0, 2, 5, 0),
+          List(0, 0, 0, 0, 0, 0, 0, 7, 4),
+          List(0, 0, 5, 2, 0, 6, 3, 0, 0)
+        )
+      )
+    ) // => false, top right cell should be 2
+
+    println(renderSudoku(validGrid))
+  }
 
   def isValidSudoku(grid: Grid): Boolean =
     !Range(0, 9).exists { i =>
@@ -44,37 +79,4 @@ object Chapter4 {
       )
       .replaceAll("0", " ")
 
-  def execute(): Unit = {
-    val validGrid = List(
-      List(3, 1, 6, 5, 7, 8, 4, 9, 2),
-      List(5, 2, 9, 1, 3, 4, 7, 6, 8),
-      List(4, 8, 7, 6, 2, 9, 5, 3, 1),
-      List(2, 6, 3, 0, 1, 0, 0, 8, 0),
-      List(9, 7, 4, 8, 6, 3, 0, 0, 5),
-      List(8, 5, 1, 0, 9, 0, 6, 0, 0),
-      List(1, 3, 0, 0, 0, 0, 2, 5, 0),
-      List(0, 0, 0, 0, 0, 0, 0, 7, 4),
-      List(0, 0, 5, 2, 0, 6, 3, 0, 0)
-    )
-
-    println(isValidSudoku(validGrid)) // => true
-
-    println(
-      isValidSudoku(
-        List(
-          List(3, 1, 6, 5, 7, 8, 4, 9, 3),
-          List(5, 2, 9, 1, 3, 4, 7, 6, 8),
-          List(4, 8, 7, 6, 2, 9, 5, 3, 1),
-          List(2, 6, 3, 0, 1, 0, 0, 8, 0),
-          List(9, 7, 4, 8, 6, 3, 0, 0, 5),
-          List(8, 5, 1, 0, 9, 0, 6, 0, 0),
-          List(1, 3, 0, 0, 0, 0, 2, 5, 0),
-          List(0, 0, 0, 0, 0, 0, 0, 7, 4),
-          List(0, 0, 5, 2, 0, 6, 3, 0, 0)
-        )
-      )
-    ) // => false, top right cell should be 2
-
-    println(renderSudoku(validGrid))
-  }
 }
