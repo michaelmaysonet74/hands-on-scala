@@ -9,6 +9,7 @@ case class Msg(
 )
 
 object Chapter3 {
+
   def execute(): Unit = {
     flexibleFizzBuzz(s => {})
     flexibleFizzBuzz(s => println(s))
