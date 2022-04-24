@@ -4,6 +4,7 @@ import requests._
 import upickle._
 
 import scala.util.{Left, Right}
+import scala.concurrent.{ExecutionContext, Future}
 
 final case class Issue(
   id: Int,
@@ -19,11 +20,13 @@ final case class Comment(
   body: String
 )
 
-object Chapter12 {
+case class Chapter12()(implicit
+  val ec: ExecutionContext
+) {
 
   import Chapter3.withFileReader
 
-  def execute(): Unit = {
+  def execute(): Future[Unit] = Future {
     val srcRepo = "lihaoyi/requests-scala"
     val destRepo = "michaelmaysonet74/issue-migration"
 
@@ -90,38 +93,31 @@ object Chapter12 {
       }
   }
 
-  private def getIssues(srcRepo: String, token: String): List[Issue] = {
-    val issues = fetchPaginated(
+  private def getIssues(srcRepo: String, token: String): List[Issue] =
+    fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues",
       token,
       None,
       None,
       "state" -> "all"
-    )
+    ).collect {
+      case issue if !issue.obj.contains("pull_request") =>
+        Issue(
+          id = issue("number").num.toInt,
+          title = issue("title").str,
+          body = issue("body").str,
+          user = issue("user")("login").str,
+          state = issue("state").str
+        )
+    }.sortBy(_.id)
 
-    issues
-      .collect {
-        case rawIssue if !rawIssue.obj.contains("pull_request") =>
-          Issue(
-            id = rawIssue("number").num.toInt,
-            title = rawIssue("title").str,
-            body = rawIssue("body").str,
-            user = rawIssue("user")("login").str,
-            state = rawIssue("state").str
-          )
-      }
-      .sortBy(_.id)
-  }
-
-  private def getComments(srcRepo: String, token: String): List[Comment] = {
-    val comments = fetchPaginated(
+  private def getComments(srcRepo: String, token: String): List[Comment] =
+    fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues/comments",
       token,
       None,
       None
-    )
-
-    comments.map { comment =>
+    ).map { comment =>
       Comment(
         issueId = comment("issue_url").str match {
           case s"https://api.github.com/repos/$srcRepo/issues/$id" => id.toInt
@@ -130,40 +126,6 @@ object Chapter12 {
         body = comment("body").str
       )
     }
-  }
-
-  private def fetchPaginated(
-    url: String,
-    token: String,
-    page: Option[Int],
-    responses: Option[List[ujson.Value]],
-    params: (String, String)*
-  ): List[ujson.Value] = {
-    val _page = page.getOrElse(1)
-    val _responses = responses.getOrElse(List.empty[ujson.Value])
-
-    println(s"page ${_page}...")
-
-    val resp = requests.get(
-      url,
-      params = Map("page" -> _page.toString) ++ params,
-      headers = Map("Authorization" -> s"token $token")
-    )
-
-    val parsed = ujson.read(resp).arr
-
-    if (parsed.length > 0) {
-      _responses ++ fetchPaginated(
-        url,
-        token,
-        Some(_page + 1),
-        Some(parsed.toList),
-        params: _*
-      )
-    } else {
-      _responses
-    }
-  }
 
   private def postIssue(
     issue: Issue,
@@ -224,6 +186,39 @@ object Chapter12 {
       )
 
       println(response.statusCode)
+    }
+  }
+
+  private def fetchPaginated(
+    url: String,
+    token: String,
+    page: Option[Int],
+    responses: Option[List[ujson.Value]],
+    params: (String, String)*
+  ): List[ujson.Value] = {
+    val _page = page.getOrElse(1)
+    val _responses = responses.getOrElse(List.empty[ujson.Value])
+
+    println(s"page ${_page}...")
+
+    val resp = requests.get(
+      url,
+      params = Map("page" -> _page.toString) ++ params,
+      headers = Map("Authorization" -> s"token $token")
+    )
+
+    val parsed = ujson.read(resp).arr
+
+    if (parsed.length > 0) {
+      _responses ++ fetchPaginated(
+        url,
+        token,
+        Some(_page + 1),
+        Some(parsed.toList),
+        params: _*
+      )
+    } else {
+      _responses
     }
   }
 
