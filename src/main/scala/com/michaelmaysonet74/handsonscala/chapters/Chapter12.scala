@@ -48,6 +48,90 @@ object Chapter12 {
       case None        => Left("Couldn't get token.")
     }
 
+  private def migrateIssuesWithComments(
+    srcRepo: String,
+    destRepo: String,
+    token: String
+  ): Unit = {
+    val issues = getIssues(srcRepo, token);
+    val comments = getComments(srcRepo, token)
+
+    val issueNumMap = issues
+      .map(
+        postIssue(
+          _,
+          srcRepo,
+          destRepo,
+          token
+        )
+      )
+      .toMap
+
+    issues
+      .collect {
+        case issue if issue.state == "closed" && issueNumMap.get(issue.id) != None =>
+          closeIssue(
+            issueNumMap(issue.id).toInt,
+            issue.state,
+            destRepo,
+            token
+          )
+      }
+
+    comments
+      .collect {
+        case comment if issueNumMap.get(comment.issueId) != None =>
+          postComment(
+            comment,
+            issueNumMap(comment.issueId).toInt,
+            destRepo,
+            token
+          )
+      }
+  }
+
+  private def getIssues(srcRepo: String, token: String): List[Issue] = {
+    val issues = fetchPaginated(
+      s"https://api.github.com/repos/$srcRepo/issues",
+      token,
+      None,
+      None,
+      "state" -> "all"
+    )
+
+    issues
+      .collect {
+        case rawIssue if !rawIssue.obj.contains("pull_request") =>
+          Issue(
+            id = rawIssue("number").num.toInt,
+            title = rawIssue("title").str,
+            body = rawIssue("body").str,
+            user = rawIssue("user")("login").str,
+            state = rawIssue("state").str
+          )
+      }
+      .sortBy(_.id)
+  }
+
+  private def getComments(srcRepo: String, token: String): List[Comment] = {
+    val comments = fetchPaginated(
+      s"https://api.github.com/repos/$srcRepo/issues/comments",
+      token,
+      None,
+      None
+    )
+
+    comments.map { comment =>
+      Comment(
+        issueId = comment("issue_url").str match {
+          case s"https://api.github.com/repos/$srcRepo/issues/$id" => id.toInt
+        },
+        user = comment("user")("login").str,
+        body = comment("body").str
+      )
+    }
+  }
+
   private def fetchPaginated(
     url: String,
     token: String,
@@ -79,29 +163,6 @@ object Chapter12 {
     } else {
       _responses
     }
-  }
-
-  private def getIssues(srcRepo: String, token: String): List[Issue] = {
-    val issues = fetchPaginated(
-      s"https://api.github.com/repos/$srcRepo/issues",
-      token,
-      None,
-      None,
-      "state" -> "all"
-    )
-
-    issues
-      .collect {
-        case rawIssue if !rawIssue.obj.contains("pull_request") =>
-          Issue(
-            id = rawIssue("number").num.toInt,
-            title = rawIssue("title").str,
-            body = rawIssue("body").str,
-            user = rawIssue("user")("login").str,
-            state = rawIssue("state").str
-          )
-      }
-      .sortBy(_.id)
   }
 
   private def postIssue(
@@ -145,25 +206,6 @@ object Chapter12 {
     println(response.statusCode)
   }
 
-  private def getComments(srcRepo: String, token: String): List[Comment] = {
-    val comments = fetchPaginated(
-      s"https://api.github.com/repos/$srcRepo/issues/comments",
-      token,
-      None,
-      None
-    )
-
-    comments.map { comment =>
-      Comment(
-        issueId = comment("issue_url").str match {
-          case s"https://api.github.com/repos/$srcRepo/issues/$id" => id.toInt
-        },
-        user = comment("user")("login").str,
-        body = comment("body").str
-      )
-    }
-  }
-
   private def postComment(
     comment: Comment,
     newIssueId: Int,
@@ -183,48 +225,6 @@ object Chapter12 {
 
       println(response.statusCode)
     }
-  }
-
-  private def migrateIssuesWithComments(
-    srcRepo: String,
-    destRepo: String,
-    token: String
-  ): Unit = {
-    val issues = getIssues(srcRepo, token);
-    val comments = getComments(srcRepo, token)
-
-    val issueNumMap = issues
-      .map(
-        postIssue(
-          _,
-          srcRepo,
-          destRepo,
-          token
-        )
-      )
-      .toMap
-
-    issues
-      .collect {
-        case issue if issue.state == "closed" && issueNumMap.get(issue.id) != None =>
-          closeIssue(
-            issueNumMap(issue.id).toInt,
-            issue.state,
-            destRepo,
-            token
-          )
-      }
-
-    comments
-      .collect {
-        case comment if issueNumMap.get(comment.issueId) != None =>
-          postComment(
-            comment,
-            issueNumMap(comment.issueId).toInt,
-            destRepo,
-            token
-          )
-      }
   }
 
 }
