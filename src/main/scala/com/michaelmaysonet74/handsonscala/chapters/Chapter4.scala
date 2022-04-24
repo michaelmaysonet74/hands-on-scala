@@ -1,11 +1,13 @@
 package com.michaelmaysonet74.handsonscala.chapters
 
-object Chapter4 {
+import scala.concurrent.{ExecutionContext, Future}
+
+final case class Chapter4()(implicit val ec: ExecutionContext) {
 
   type Row = List[Int]
   type Grid = List[Row]
 
-  def execute(): Unit = {
+  def execute(): Future[Unit] = Future {
     val validGrid = List(
       List(3, 1, 6, 5, 7, 8, 4, 9, 2),
       List(5, 2, 9, 1, 3, 4, 7, 6, 8),
@@ -18,28 +20,27 @@ object Chapter4 {
       List(0, 0, 5, 2, 0, 6, 3, 0, 0)
     )
 
-    println(isValidSudoku(validGrid)) // => true
+    isValidSudoku(validGrid).map(println) // => true
 
-    println(
-      isValidSudoku(
-        List(
-          List(3, 1, 6, 5, 7, 8, 4, 9, 3),
-          List(5, 2, 9, 1, 3, 4, 7, 6, 8),
-          List(4, 8, 7, 6, 2, 9, 5, 3, 1),
-          List(2, 6, 3, 0, 1, 0, 0, 8, 0),
-          List(9, 7, 4, 8, 6, 3, 0, 0, 5),
-          List(8, 5, 1, 0, 9, 0, 6, 0, 0),
-          List(1, 3, 0, 0, 0, 0, 2, 5, 0),
-          List(0, 0, 0, 0, 0, 0, 0, 7, 4),
-          List(0, 0, 5, 2, 0, 6, 3, 0, 0)
-        )
+    isValidSudoku(
+      List(
+        List(3, 1, 6, 5, 7, 8, 4, 9, 3),
+        List(5, 2, 9, 1, 3, 4, 7, 6, 8),
+        List(4, 8, 7, 6, 2, 9, 5, 3, 1),
+        List(2, 6, 3, 0, 1, 0, 0, 8, 0),
+        List(9, 7, 4, 8, 6, 3, 0, 0, 5),
+        List(8, 5, 1, 0, 9, 0, 6, 0, 0),
+        List(1, 3, 0, 0, 0, 0, 2, 5, 0),
+        List(0, 0, 0, 0, 0, 0, 0, 7, 4),
+        List(0, 0, 5, 2, 0, 6, 3, 0, 0)
       )
-    ) // => false, top right cell should be 2
+    ).map(println)
+    // => false, top right cell should be 2
 
-    println(renderSudoku(validGrid))
+    renderSudoku(validGrid).map(println)
   }
 
-  def isValidSudoku(grid: Grid): Boolean =
+  def isValidSudoku(grid: Grid): Future[Boolean] = Future {
     !Range(0, 9).exists { i =>
       // Filter out 0 values, before checking for unique values
       val row = Range(0, 9).map(grid(i)(_)).filter(_ > 0)
@@ -52,8 +53,9 @@ object Chapter4 {
       col.distinct.length != col.length ||
       square.distinct.length != square.length
     }
+  }
 
-  def renderSudoku(grid: Grid): String =
+  def renderSudoku(grid: Grid): Future[String] = Future {
     grid
       .map { row =>
         row
@@ -78,5 +80,6 @@ object Chapter4 {
         "+-------+-------+-------+"
       )
       .replaceAll("0", " ")
+  }
 
 }

@@ -2,27 +2,20 @@ package com.michaelmaysonet74.handsonscala.chapters
 
 import java.io._
 
+import scala.concurrent.{ExecutionContext, Future}
+
 case class Msg(
   id: Int,
   parent: Option[Int],
   txt: String
 )
 
-object Chapter3 {
+final case class Chapter3()(implicit val ec: ExecutionContext) {
 
-  def execute(): Unit = {
-    flexibleFizzBuzz(s => {})
-    flexibleFizzBuzz(s => println(s))
+  import Chapter3._
 
-    var i = 0
-    val output = new Array[String](100)
-
-    flexibleFizzBuzz { s =>
-      output(i) = s
-      i += 1
-    }
-
-    println(output.mkString("\n"))
+  def execute(): Future[Unit] = Future {
+    fizzBuzz().map { r => println(r.mkString("\n")) }
 
     printMessages(
       List(
@@ -48,6 +41,31 @@ object Chapter3 {
 
     assert(result == "Hello\nWorld!")
   }
+
+  private def fizzBuzz(): Future[List[String]] =
+    Future.successful((1 to 100).map {
+      case n if n % 3 == 0 && n % 5 == 0 => "FizzBuzz"
+      case n if n % 3 == 0               => "Fizz"
+      case n if n % 5 == 0               => "Buzz"
+      case n                             => n.toString
+    }.toList)
+
+}
+
+object Chapter3 {
+
+  private def printMessages(
+    messages: Seq[Msg],
+    indent: String = "",
+    parent: Option[Int] = None
+  ): Unit =
+    for {
+      m <- messages
+      if m.parent == parent
+    } {
+      println(s"$indent#${m.id} ${m.txt}")
+      printMessages(messages, s"$indent    ", Some(m.id))
+    }
 
   def withFileWriter(fileName: String)(cb: BufferedWriter => Unit): Unit = {
     val file = new File(fileName)
@@ -85,29 +103,6 @@ object Chapter3 {
         println(s"Had a problem trying to read file: $fileName")
         None
       }
-    }
-
-  private def flexibleFizzBuzz(cb: String => Unit) =
-    (1 to 100).foreach { n =>
-      cb(
-        if (n % 3 == 0 && n % 5 == 0) "FizzBuzz"
-        else if (n % 3 == 0) "Fizz"
-        else if (n % 5 == 0) "Buzz"
-        else n.toString
-      )
-    }
-
-  private def printMessages(
-    messages: Seq[Msg],
-    indent: String = "",
-    parent: Option[Int] = None
-  ): Unit =
-    for {
-      m <- messages
-      if m.parent == parent
-    } {
-      println(s"$indent#${m.id} ${m.txt}")
-      printMessages(messages, s"$indent    ", Some(m.id))
     }
 
 }
