@@ -3,7 +3,6 @@ package com.michaelmaysonet74.handsonscala
 import com.michaelmaysonet74.handsonscala.chapters._
 
 import scala.concurrent.ExecutionContext
-import scala.util.{Success, Failure}
 
 object Main extends App {
 
