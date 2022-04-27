@@ -55,76 +55,89 @@ case class Chapter12()(implicit
     srcRepo: String,
     destRepo: String,
     token: String
-  ): Unit = {
-    val issues = getIssues(srcRepo, token);
-    val comments = getComments(srcRepo, token)
+  ): Future[Unit] = {
+    val eventualIssues = getIssues(srcRepo, token)
+    val eventualComments = getComments(srcRepo, token)
 
-    val issueNumMap = issues
-      .map(
-        postIssue(
-          _,
-          srcRepo,
-          destRepo,
-          token
-        )
-      )
-      .toMap
+    for {
+      issues <- eventualIssues
+      comments <- eventualComments
+    } yield {
+      println(issues)
+    }
 
-    issues
-      .collect {
-        case issue if issue.state == "closed" && issueNumMap.get(issue.id) != None =>
-          closeIssue(
-            issueNumMap(issue.id).toInt,
-            issue.state,
-            destRepo,
-            token
-          )
-      }
+    // val issueNumMap = issues
+    //   .map(
+    //     postIssue(
+    //       _,
+    //       srcRepo,
+    //       destRepo,
+    //       token
+    //     )
+    //   )
+    //   .toMap
 
-    comments
-      .collect {
-        case comment if issueNumMap.get(comment.issueId) != None =>
-          postComment(
-            comment,
-            issueNumMap(comment.issueId).toInt,
-            destRepo,
-            token
-          )
-      }
+    // issues
+    //   .collect {
+    //     case issue if issue.state == "closed" && issueNumMap.get(issue.id) != None =>
+    //       closeIssue(
+    //         issueNumMap(issue.id).toInt,
+    //         issue.state,
+    //         destRepo,
+    //         token
+    //       )
+    //   }
+
+    // comments
+    //   .collect {
+    //     case comment if issueNumMap.get(comment.issueId) != None =>
+    //       postComment(
+    //         comment,
+    //         issueNumMap(comment.issueId).toInt,
+    //         destRepo,
+    //         token
+    //       )
+    //   }
   }
 
-  private def getIssues(srcRepo: String, token: String): List[Issue] =
+  private def getIssues(srcRepo: String, token: String): Future[List[Issue]] =
     fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues",
       token,
       None,
       None,
       "state" -> "all"
-    ).collect {
-      case issue if !issue.obj.contains("pull_request") =>
-        Issue(
-          id = issue("number").num.toInt,
-          title = issue("title").str,
-          body = issue("body").str,
-          user = issue("user")("login").str,
-          state = issue("state").str
-        )
-    }.sortBy(_.id)
+    ).map { issues =>
+      issues
+        .collect {
+          case issue if !issue.obj.contains("pull_request") =>
+            Issue(
+              id = issue("number").num.toInt,
+              title = issue("title").str,
+              body = issue("body").str,
+              user = issue("user")("login").str,
+              state = issue("state").str
+            )
+        }
+        .sortBy(_.id)
+    }
 
-  private def getComments(srcRepo: String, token: String): List[Comment] =
+  private def getComments(srcRepo: String, token: String): Future[List[Comment]] =
     fetchPaginated(
       s"https://api.github.com/repos/$srcRepo/issues/comments",
       token,
       None,
       None
-    ).map { comment =>
-      Comment(
-        issueId = comment("issue_url").str match {
-          case s"https://api.github.com/repos/$srcRepo/issues/$id" => id.toInt
-        },
-        user = comment("user")("login").str,
-        body = comment("body").str
-      )
+    ).map { comments =>
+      comments.map { comment =>
+        Comment(
+          issueId = comment("issue_url").str match {
+            case s"https://api.github.com/repos/$srcRepo/issues/$id" => id.toInt
+          },
+          user = comment("user")("login").str,
+          body = comment("body").str
+        )
+      }
     }
 
   private def postIssue(
@@ -192,33 +205,34 @@ case class Chapter12()(implicit
   private def fetchPaginated(
     url: String,
     token: String,
-    page: Option[Int],
-    responses: Option[List[ujson.Value]],
+    maybePage: Option[Int],
+    maybeResponses: Option[List[ujson.Value]],
     params: (String, String)*
-  ): List[ujson.Value] = {
-    val _page = page.getOrElse(1)
-    val _responses = responses.getOrElse(List.empty[ujson.Value])
+  ): Future[List[ujson.Value]] = {
+    val page = maybePage.getOrElse(1)
+    val responses = maybeResponses.getOrElse(List.empty[ujson.Value])
 
-    println(s"page ${_page}...")
+    println(s"page ${page}...")
 
-    val resp = requests.get(
-      url,
-      params = Map("page" -> _page.toString) ++ params,
-      headers = Map("Authorization" -> s"token $token")
-    )
-
-    val parsed = ujson.read(resp).arr
-
-    if (parsed.length > 0) {
-      _responses ++ fetchPaginated(
+    Future {
+      requests.get(
         url,
-        token,
-        Some(_page + 1),
-        Some(parsed.toList),
-        params: _*
+        params = Map("page" -> page.toString) ++ params,
+        headers = Map("Authorization" -> s"token $token")
       )
-    } else {
-      _responses
+    }.flatMap { resp =>
+      val parsed = ujson.read(resp).arr
+      println(resp)
+      if (parsed.length > 0)
+        fetchPaginated(
+          url,
+          token,
+          Some(page + 1),
+          Some(parsed.toList),
+          params: _*
+        ).map { r => responses ++ r }
+      else
+        Future.successful(responses)
     }
   }
 
