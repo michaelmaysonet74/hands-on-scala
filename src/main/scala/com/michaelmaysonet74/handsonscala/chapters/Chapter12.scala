@@ -26,14 +26,14 @@ case class Chapter12()(implicit
 
   import Chapter3.withFileReader
 
-  def execute(): Future[Unit] = Future {
+  def execute(): Future[Unit] = {
     val srcRepo = "lihaoyi/requests-scala"
     val destRepo = "michaelmaysonet74/issue-migration"
 
     getToken(
       "/Users/michael/code/hands-on-scala/github_token.txt"
     ) match {
-      case Left(reason) => println(reason)
+      case Left(reason) => Future.successful(println(reason))
       case Right(token) =>
         migrateIssuesWithComments(
           srcRepo,
@@ -64,6 +64,7 @@ case class Chapter12()(implicit
       comments <- eventualComments
     } yield {
       println(issues)
+      println(comments)
     }
 
     // val issueNumMap = issues
@@ -222,7 +223,6 @@ case class Chapter12()(implicit
       )
     }.flatMap { resp =>
       val parsed = ujson.read(resp).arr
-      println(resp)
       if (parsed.length > 0)
         fetchPaginated(
           url,

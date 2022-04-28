@@ -2,7 +2,8 @@ package com.michaelmaysonet74.handsonscala
 
 import com.michaelmaysonet74.handsonscala.chapters._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.duration.Duration
 
 object Main extends App {
 
@@ -14,6 +15,6 @@ object Main extends App {
 
   chapter3.execute()
   chapter4.execute()
-  chapter12.execute()
+  Await.ready(chapter12.execute(), Duration(10, "s"))
 
 }
