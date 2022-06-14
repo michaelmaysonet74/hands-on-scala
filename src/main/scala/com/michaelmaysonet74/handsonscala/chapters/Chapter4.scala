@@ -4,10 +4,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 final case class Chapter4()(implicit val ec: ExecutionContext) {
 
+  type Block = List[String]
   type Row = List[Int]
   type Grid = List[Row]
 
-  def execute(): Future[Unit] = Future {
+  def execute(): Future[Unit] = {
     val validGrid = List(
       List(3, 1, 6, 5, 7, 8, 4, 9, 2),
       List(5, 2, 9, 1, 3, 4, 7, 6, 8),
@@ -55,18 +56,25 @@ final case class Chapter4()(implicit val ec: ExecutionContext) {
     }
   }
 
-  def renderSudoku(grid: Grid): Future[String] = Future {
+  def renderSudoku(grid: Grid): Future[String] = Future.successful(
+    (renderRows _ andThen renderBlocks _)(grid).replaceAll("0", " ")
+  )
+
+  private def renderRow(row: Row): String =
+    row
+      .grouped(3)
+      .map(_.mkString("| ", " ", " "))
+      .mkString("", "", "|")
+
+  private def renderRows(grid: Grid): List[Block] = {
     grid
-      .map { row =>
-        row
-          .grouped(3)
-          .map(
-            _.mkString("| ", " ", " ")
-          )
-          .mkString("", "", "|")
-      }
+      .map(renderRow)
       .grouped(3)
       .toList
+  }
+
+  private def renderBlocks(blocks: List[Block]): String =
+    blocks
       .map(
         _.mkString(
           "+-------+-------+-------+\n",
@@ -79,7 +87,5 @@ final case class Chapter4()(implicit val ec: ExecutionContext) {
         "",
         "+-------+-------+-------+"
       )
-      .replaceAll("0", " ")
-  }
 
 }
